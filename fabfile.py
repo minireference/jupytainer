@@ -85,13 +85,6 @@ def jupytainer(username, token=None):
     print(blue(f"Visit  http://{env.hosts}:{port}/?token={token}"))
 
 
-def dexec(container, command, options='-ti'):
-    cmd = 'docker exec '
-    cmd += options
-    cmd += ' {} bash -c \'{}\''.format(container, command)
-    dlocal(cmd)
-
-
 
 # DOCKER COMMANDS
 ################################################################################

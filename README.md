@@ -1,6 +1,5 @@
 # jupytainer
-Scripts for starting a jupter notebook in a container on a remote docker host
-
+Scripts for starting a jupyter notebook in a container on a remote docker host.
 
 
 
@@ -22,6 +21,7 @@ linux server (Debian or Ubuntu) in the cloud with the following characteristics:
 Put the relevant info in `credentials/prod.env` following the example env.
 
 
+
 ## Usage
 To start a new coding environment (Jupyter notebook) for user "juslie" run:
 
@@ -29,19 +29,17 @@ To start a new coding environment (Jupyter notebook) for user "juslie" run:
 fab prod jupytainer:"julie"
 ```
 
-This will start the Jupyter container, run the initialization steps and print the
-URL where Julie can access the environment.
+This will start the Jupyter container, run the initialization steps and print
+the URL to share with the user (in this case Julie) so she can can access the
+environment and participate in the event without needing a google account.
 
 The environment and files within it will persist as long as the container is running.
-
 
 After the event, you can stop and remove the container using
 ```bash
 fab prod dstop:"jupytainer_julie"
 fab prod drm:"jupytainer_julie"
 ```
-
-
 
 
 
