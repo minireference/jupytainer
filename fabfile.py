@@ -1,6 +1,7 @@
 #/usr/bin/env python
 from datetime import datetime
 from dotenv import load_dotenv
+import json
 import os
 import sys
 import uuid
@@ -41,6 +42,41 @@ def prod():
 
 
 
+# JUPYTER NOTEBOOK
+################################################################################
+
+def find_used_ports():
+    with hide('stdout', 'running'):
+        ps_data_jsonl = dlocal("docker ps --format='{{json .}}'", capture=True)
+    used_ports = set()
+    for line in ps_data_jsonl.stdout.split('\n'):
+        ps_data = json.loads(line)
+        ports_info = ps_data["Ports"]
+        if ports_info.count('>') != 1:
+            continue
+        port = ports_info.split('>')[1].split('/')[0]
+        used_ports.add(int(port))
+    return used_ports
+
+def find_unused_port():
+    all_ports = set(n for n in range(8888, 8988+1))
+    unused_ports = all_ports - find_used_ports()
+    unused_port = sorted(unused_ports)[0]
+    print(unused_port)
+    return unused_port
+
+@task
+def jupytainer(username, token=None):
+    port = str(find_unused_port())
+    options =  f"  -p {port}:{port}"
+    options += f" --name jupytainer_{username}"
+    image = "jupyter/minimal-notebook:latest"
+    command = "start-notebook.sh"
+    args =  " --NotebookApp.token='{}'".format(token if token else "mp84")
+    args +=  f" --port={port}"
+    args += " --no-browser &"
+    drun(image, options=options, command=command, args=args)
+
 
 
 
@@ -56,6 +92,13 @@ def drun(image, options='', command='', args=''):
 @task
 def dstop(container, options=''):
     cmd = 'docker stop '
+    cmd += options
+    cmd += ' {}'.format(container)
+    dlocal(cmd)
+
+@task
+def drm(container, options=''):
+    cmd = 'docker rm '
     cmd += options
     cmd += ' {}'.format(container)
     dlocal(cmd)
@@ -98,7 +141,7 @@ def dsysprune(options=''):
 ################################################################################
 
 @task
-def dlocal(command):
+def dlocal(command, capture=False):
     """
     Execute the `command` (srt) on the remote docker host `env.DOCKER_HOST`.
     If `env.DOCKER_HOST` is not defined, execute `command` on the local docker.
@@ -106,7 +149,51 @@ def dlocal(command):
     """
     if 'DOCKER_HOST' in env:
         with shell_env(DOCKER_HOST=env.DOCKER_HOST):
-            local(command)  # this will run the command on remote docker host
+            return local(command, capture=capture)  # run on remote docker host
     else:
-        local(command)      # this will use local docker (if installed)
+        return local(command, capture=capture)      # run on localhost docker
+
+
+
+# PROVISION DOCKER ON REMOTE HOST
+################################################################################
+
+@task
+def install_docker():
+    """
+    Install docker on remote host following the instructions from the docs:
+    https://docs.docker.com/engine/install/debian/#install-using-the-repository
+    """
+    with settings(warn_only=True), hide('stdout', 'stderr', 'warnings'):
+        sudo('apt-get -qy remove docker docker-engine docker.io containerd runc')
+    with hide('stdout'):
+        sudo('apt-get update -qq')
+        sudo('apt-get -qy install apt-transport-https ca-certificates curl gnupg-agent software-properties-common')
+    sudo('curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add -')
+    sudo('add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/debian $(lsb_release -cs) stable"')
+    with hide('stdout'):
+        sudo('apt-get update -qq')
+        sudo('apt-get -qy install docker-ce docker-ce-cli containerd.io')
+    sudo('usermod -aG docker {}'.format(env.user))  # add user to `docker` group
+    sudo("sed -i 's/^#MaxSessions 10/MaxSessions 30/' /etc/ssh/sshd_config")
+    # docker-compose opens >10 SSH sessions, hence the need to up default value
+    # via https://github.com/docker/compose/issues/6463#issuecomment-458607840
+    # TODO sysctl -w vm.max_map_count=262144
+    sudo('service sshd restart')
+    print(green('Docker installed on ' + env.host))
+
+
+@task
+def uninstall_docker(deep=False):
+    """
+    Uninstall docker using instructions from the official Docker docs:
+    https://docs.docker.com/engine/install/debian/#uninstall-docker-engine
+    """
+    deep = (deep and deep.lower() == 'true')  # defaults to False
+    with hide('stdout'):
+        sudo('apt-get -qy purge docker-ce docker-ce-cli containerd.io')
+        if deep:
+            sudo('rm -rf /var/lib/docker')
+            sudo('rm -rf /var/lib/containerd')
+    print(green('Docker uninstalled from ' + env.host))
 
