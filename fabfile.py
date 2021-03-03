@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 import json
 import os
 import sys
+import time
 import uuid
 
 
@@ -69,14 +70,26 @@ def find_unused_port():
 def jupytainer(username, token=None):
     port = str(find_unused_port())
     options =  f"  -p {port}:{port}"
-    options += f" --name jupytainer_{username}"
+    container_name = f"jupytainer_{username}"
+    options += f" --name {container_name}"
     image = "jupyter/minimal-notebook:latest"
     command = "start-notebook.sh"
-    args =  " --NotebookApp.token='{}'".format(token if token else "mp84")
+    token = token if token else "mp84"
+    args =  f" --NotebookApp.token='{token}'"
     args +=  f" --port={port}"
     args += " --no-browser &"
     drun(image, options=options, command=command, args=args)
+    time.sleep(3)
+    dexec(container_name, command="git clone https://github.com/ygingras/mp-84-atelier", options="")
+    print(green("Notebook env ready..."))
+    print(blue(f"Visit  http://{env.hosts}:{port}/?token={token}"))
 
+
+def dexec(container, command, options='-ti'):
+    cmd = 'docker exec '
+    cmd += options
+    cmd += ' {} bash -c \'{}\''.format(container, command)
+    dlocal(cmd)
 
 
 
