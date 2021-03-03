@@ -74,7 +74,7 @@ def jupytainer(username, token=None):
     options += f" --name {container_name}"
     image = "jupyter/minimal-notebook:latest"
     command = "start-notebook.sh"
-    token = token if token else "mp84"
+    token = token if token else "mp84" + username
     args =  f" --NotebookApp.token='{token}'"
     args +=  f" --port={port}"
     args += " --no-browser &"
