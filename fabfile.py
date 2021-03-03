@@ -42,23 +42,6 @@ def prod():
 
 
 
-# FWD DOCKER COMMANDS TO DOCKER HOST
-################################################################################
-
-@task
-def dlocal(command):
-    """
-    Execute the `command` (srt) on the remote docker host `env.DOCKER_HOST`.
-    If `env.DOCKER_HOST` is not defined, execute `command` on the local docker.
-    Docker remote execution via SSH requires remote host to run docker v18+.
-    """
-    if 'DOCKER_HOST' in env:
-        with shell_env(DOCKER_HOST=env.DOCKER_HOST):
-            local(command)  # this will run the command on remote docker host
-    else:
-        local(command)      # this will use local docker (if installed)
-
-
 
 
 # DOCKER COMMANDS
@@ -107,4 +90,23 @@ def dsysprune(options=''):
     cmd = 'docker system prune -f '
     cmd += options
     dlocal(cmd)
+
+
+
+
+# FWD DOCKER COMMANDS TO DOCKER HOST
+################################################################################
+
+@task
+def dlocal(command):
+    """
+    Execute the `command` (srt) on the remote docker host `env.DOCKER_HOST`.
+    If `env.DOCKER_HOST` is not defined, execute `command` on the local docker.
+    Docker remote execution via SSH requires remote host to run docker v18+.
+    """
+    if 'DOCKER_HOST' in env:
+        with shell_env(DOCKER_HOST=env.DOCKER_HOST):
+            local(command)  # this will run the command on remote docker host
+    else:
+        local(command)      # this will use local docker (if installed)
 
