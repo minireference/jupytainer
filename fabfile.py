@@ -79,8 +79,8 @@ def jupytainer(username, token=None):
     args +=  f" --port={port}"
     args += " --no-browser &"
     drun(image, options=options, command=command, args=args)
-    time.sleep(3)
-    dexec(container_name, command="git clone https://github.com/ygingras/mp-84-atelier", options="")
+    time.sleep(6)
+    dexec(container_name, command="git clone https://github.com/mtlpy/mp-84-atelier.git", options="")
     print(green("Notebook env ready..."))
     print(blue(f"Visit  http://{env.hosts}:{port}/?token={token}"))
 
